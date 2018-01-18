@@ -29,3 +29,7 @@ test-driver
 *.diff.gz
 *~
 *.o
+etc/.DS_Store
+cmake-build-debug/CMakeFiles/clion-log.txt
+.idea/workspace.xml
+.DS_Store

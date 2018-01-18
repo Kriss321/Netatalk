@@ -250,26 +250,27 @@ static int login(AFPObj *obj, struct passwd *pwd, void (*logout)(void), int expi
         ad_setfuid(0);
         LOG(log_info, logtype_afpd, "admin login -- %s", pwd->pw_name );
     } else {
-        if (setegid( pwd->pw_gid ) < 0 || seteuid( pwd->pw_uid ) < 0) {
+        if (obj->options.force_user) {
+            if (seteuid(obj->options.force_uid) < 0) {
+                LOG(log_error, logtype_afpd, "login: %s %s", pwd->pw_name, strerror(errno));
+                return AFPERR_BADUAM;
+            }
+            LOG(log_info, logtype_afpd, "login: force uid: %ju", (uintmax_t)obj->options.force_uid);
+        }
+
+        if (obj->options.force_group) {
+            if (setegid(obj->options.force_gid) < 0) {
+                LOG(log_error, logtype_afpd, "login: %s %s", pwd->pw_name, strerror(errno));
+                return AFPERR_BADUAM;
+            }
+            LOG(log_info, logtype_afpd, "login: force gid: %ju", (uintmax_t)obj->options.force_gid);
+        }
+
+        if ((!obj->options.force_group && setegid( pwd->pw_gid ) < 0) ||
+            (!obj->options.force_user && seteuid( pwd->pw_uid ) < 0)) {
             LOG(log_error, logtype_afpd, "login: %s %s", pwd->pw_name, strerror(errno) );
             return AFPERR_BADUAM;
         }
-    }
-
-    if (obj->options.force_user) {
-        if (seteuid(obj->options.force_uid) < 0) {
-            LOG(log_error, logtype_afpd, "login: %s %s", pwd->pw_name, strerror(errno));
-            return AFPERR_BADUAM;
-        }
-        LOG(log_info, logtype_afpd, "login: force uid: %ju", (uintmax_t)obj->options.force_uid);
-    }
-
-    if (obj->options.force_group) {
-        if (setegid(obj->options.force_gid) < 0) {
-            LOG(log_error, logtype_afpd, "login: %s %s", pwd->pw_name, strerror(errno));
-            return AFPERR_BADUAM;
-        }
-        LOG(log_info, logtype_afpd, "login: force gid: %ju", (uintmax_t)obj->options.force_gid);
     }
 
     LOG(log_debug, logtype_afpd, "login: supplementary groups: %s", print_groups(obj->ngroups, obj->groups));
